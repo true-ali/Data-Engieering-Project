@@ -62,9 +62,13 @@ services:
       airflow scheduler & exec airflow webserver"
 
   metabase:
-    image: metabase/metabase:v0.53.11
+    build:
+      context: .
+      dockerfile: metabase/Dockerfile
     depends_on:
       - clickhouse
+    environment:
+      MB_PLUGINS_ALLOW_UNSIGNED: "true"
     ports:
       - "3000:3000"
     volumes:
