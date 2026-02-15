@@ -17,6 +17,11 @@ services:
       - "9644:9644"
     volumes:
       - redpanda_data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD", "rpk", "cluster", "health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   clickhouse:
     image: clickhouse/clickhouse-server:24.8
@@ -28,14 +33,21 @@ services:
       - "9000:9000"
     volumes:
       - clickhouse_data:/var/lib/clickhouse
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "localhost:8123/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   airflow:
     build:
       context: .
       dockerfile: airflow/Dockerfile
     depends_on:
-      - redpanda
-      - clickhouse
+      redpanda:
+        condition: service_healthy
+      clickhouse:
+        condition: service_healthy
     environment:
       AIRFLOW__CORE__LOAD_EXAMPLES: "False"
       AIRFLOW__CORE__EXECUTOR: SequentialExecutor
@@ -66,7 +78,8 @@ services:
       context: .
       dockerfile: metabase/Dockerfile
     depends_on:
-      - clickhouse
+      clickhouse:
+        condition: service_healthy
     environment:
       MB_PLUGINS_ALLOW_UNSIGNED: "true"
     ports:
